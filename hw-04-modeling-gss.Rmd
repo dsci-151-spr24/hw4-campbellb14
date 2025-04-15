@@ -6,7 +6,7 @@ author: "Campbell Bowers"
 
 ```{r include = FALSE}
 knitr::opts_chunk$set(
-  eval = FALSE,
+  eval = TRUE,
   out.width = "80%",
   fig.asp = 0.618,
   fig.width = 10,
@@ -189,14 +189,12 @@ collect_metrics(gss16_fit_rs_1)
     -   report the average area under the ROC curve and the accuracy for all cross validation folds `collect_metrics()`.
 
 ```{r}
+gss16_rec_2 <- recipe(advfront ~ polviews + educ, data = gss16_train) %>%
+  step_dummy(all_nominal(), -all_outcomes())
+
 gss16_wflow_2 <- workflow() %>%
   add_model(gss16_spec) %>%
   add_recipe(gss16_rec_2)
-```
-
-```{r}
-gss16_rec_2 <- recipe(advfront ~ polviews + educ, data = gss16_train) %>%
-  step_dummy(all_nominal(), -all_outcomes())
 
 gss16_fit_rs_2 <- gss16_wflow_2 %>%
   fit_resamples(
@@ -278,9 +276,43 @@ The question is phrased as the following.
 
 Answers to this question are stored in the `harass5` variable in our dataset.
 
-12. Create a subset of the data that only contains `Yes` and `No` answers for the harassment question. How many responses chose each of these answers?
+12. Create a subset of the data that only contains `Yes` and `No` answers for the harassment question. How many responses chose each of these answers?        
+```{r}
+gss16_harass <- gss16 %>%
+  filter(harass5 %in% c("Yes", "No"))
+
+gss16_harass %>%
+  count(harass5)
+```
+
 13. Describe how bootstrapping can be used to estimate the proportion of Americans who have been harassed by their superiors or co-workers at their job.
+
+***Bootstrapping can be used to estimate the proportion of Americans who have been harassed by their superiors or co-workers at their job because it is a resampling method that allows me to estimate the sampling distribution of a statistic by repeatedly resampling from the observed data with replacement. It allows me to not have to rely on assumptions about the shape of a sampling distribution.***
+
 14. Calculate a 95% bootstrap confidence interval for the proportion of Americans who have been harassed by their superiors or co-workers at their job. Interpret this interval in context of the data.
+
+```{r}
+library(tidyverse)
+library(boot)
+
+harass_data <- gss16 %>%
+  filter(harass5 %in% c("Yes", "No")) %>%
+  mutate(harass5_num = if_else(harass5 == "Yes", 1, 0))
+
+boot_prop <- function(data, indices) {
+  sample_data <- data[indices, ]
+  mean(sample_data$harass5_num)
+}
+
+set.seed(123)
+boot_results <- boot(data = harass_data, statistic = boot_prop, R = 1000)
+
+boot_ci <- boot.ci(boot_results, type = "perc")
+boot_ci
+```
+
 15. Would you expect a 90% confidence interval to be wider or narrower than the interval you calculated above? Explain your reasoning.
+
+***I would expect a 90% confidence interval to be narrower than the interval i calculated because it trades off confidence, in this case 5%, in order to give a more precise estimate.***
 
 🧶 ✅ ⬆️ Knit, *commit, and push your changes to GitHub with an appropriate commit message. Make sure to commit and push all changed files so that your Git pane is cleared up afterwards and review the md document on GitHub to make sure you're happy with the final state of your work.*
